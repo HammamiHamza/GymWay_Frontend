@@ -3,6 +3,26 @@ import axios from 'axios';
 
 const API_URL = ''; // Remplacez par l'URL de votre API
 
+const SESSIONS_API_URL = `${API_URL}/sessions`;
+
+export const fetchSessions = async () => {
+  return axios.get(SESSIONS_API_URL);
+};
+
+export const createSession = async (sessionData) => {
+  const token = localStorage.getItem('gymAdminToken');
+  return axios.post(API_URL, sessionData, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
+export const deleteSession = async (session_id) => {
+  const token = localStorage.getItem('gymAdminToken');
+  return axios.delete(`${SESSIONS_API_URL}/${session_id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+};
+
 // Fonction pour se connecter
 const login = async (email, password) => {
   try {
