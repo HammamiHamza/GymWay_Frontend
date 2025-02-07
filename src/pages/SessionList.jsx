@@ -1,20 +1,27 @@
 // src/pages/SessionList.jsx
 import { useEffect, useState } from 'react';
-import { fetchSessions, deleteSession } from '../services/authService'; // vos fonctions déjà existantes
-import { registerForSession } from '../services/registrationService';
+import axios from 'axios';
+import authService from '../services/authService';
 
 const SessionList = () => {
   const [sessions, setSessions] = useState([]);
+  const [error, setError] = useState('');
 
-  // Récupération de l'identifiant utilisateur (exemple : stocké dans le localStorage)
+  // Get the user ID and token from localStorage
   const userId = localStorage.getItem('userId');
+  const token = localStorage.getItem('token');
 
   const loadSessions = async () => {
     try {
-      const response = await fetchSessions();
+      const response = await axios.get('http://localhost:3000/sessions', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setSessions(response.data);
     } catch (error) {
-      console.error('Erreur lors du chargement des sessions', error);
+      console.error('Error loading sessions:', error);
+      setError('Error loading sessions');
     }
   };
 
@@ -22,44 +29,89 @@ const SessionList = () => {
     loadSessions();
   }, []);
 
-  const handleDelete = async (session_id) => {
-    if (window.confirm("Voulez-vous vraiment supprimer cette session ?")) {
+  const handleDelete = async (sessionId) => {
+    if (window.confirm("Are you sure you want to delete this session?")) {
       try {
-        await deleteSession(session_id);
-        setSessions(sessions.filter(session => session.session_id !== session_id));
+        await axios.delete(`http://localhost:3000/sessions/${sessionId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setSessions(sessions.filter(session => session.id !== sessionId));
       } catch (error) {
-        alert('Erreur lors de la suppression');
+        console.error('Error deleting session:', error);
+        setError('Error deleting session');
       }
     }
   };
 
   const handleRegister = async (sessionId) => {
     if (!userId) {
-      alert('Vous devez être connecté pour vous inscrire');
+      alert('You must be logged in to register for a session');
       return;
     }
     try {
-      await registerForSession(userId, sessionId);
-      alert('Inscription réussie!');
+      await axios.post(`http://localhost:3000/registrations`, {
+        userId: userId,
+        sessionId: sessionId
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      alert('Successfully registered for the session!');
     } catch (error) {
-      console.error(error);
-      alert('Erreur lors de l\'inscription');
+      console.error('Error registering for session:', error);
+      alert('Error registering for session');
     }
   };
 
   return (
-    <div>
-      <h2>Liste des sessions</h2>
-      <ul>
+    <div className="container mt-5">
+      <h2 className="mb-4">Available Sessions</h2>
+      
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      <div className="row">
         {sessions.map((session) => (
-          <li key={session.session_id}>
-            <strong>{session.session_name}</strong> <br />
-            Horaire: {session.schedule} - Durée: {session.duration} min - Capacité: {session.capacity} <br />
-            <button onClick={() => handleRegister(session.session_id)}>S'inscrire</button>
-            <button onClick={() => handleDelete(session.session_id)}>❌ Supprimer</button>
-          </li>
+          <div key={session.id} className="col-md-6 mb-4">
+            <div className="card">
+              <div className="card-body">
+                <h5 className="card-title">{session.sessionName}</h5>
+                <p className="card-text">
+                  Instructor: {session.instructor?.username || 'Not assigned'}<br />
+                  Schedule: {new Date(session.schedule).toLocaleString()}<br />
+                  Duration: {session.duration} minutes<br />
+                  Capacity: {session.capacity}
+                </p>
+                <div className="d-flex justify-content-between">
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => handleRegister(session.id)}
+                  >
+                    Register
+                  </button>
+                  {authService.getCurrentUser()?.role === 'ADMIN' && (
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => handleDelete(session.id)}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
+
+      {sessions.length === 0 && !error && (
+        <div className="alert alert-info">
+          No sessions available at the moment.
+        </div>
+      )}
     </div>
   );
 };

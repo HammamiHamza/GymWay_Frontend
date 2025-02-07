@@ -1,54 +1,81 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-//import { setUserSession } from '../services/authService';
+import authService from '../services/authService';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post('/api/login', { username, password });
-      if (response.data.success) {
-        setUserSession(response.data.token, response.data.user);
-        navigate('/dashboard');
-      } else {
-        setError('Identifiants incorrects.');
-      }
-    } catch (error) {
-      setError('Erreur de connexion. Veuillez réessayer.');
-    }
-  };
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.post('http://localhost:3000/auth/login/staff', { username: email, password });
+            console.log('Login response:', response.data); // Debugging log
 
-  return (
-    <div>
-      <h2>Connexion</h2>
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Nom d'utilisateur</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+            if (response.data && response.data.access_token) {
+                const user = {
+                    username: response.data.username,
+                    role: response.data.role,
+                    token: response.data.access_token
+                };
+                authService.setUserSession(response.data.access_token, user);
+                console.log(user.role); 
+                if (user.role === 'ADMIN') {
+                    navigate('/admin-dashboard');
+                } else if (user.role === 'STAFF') {
+                    navigate('/staff-dashboard');
+                } else {
+                    setError('Unauthorized role');
+                }
+            } else {
+                setError('Invalid response from server');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setError('Invalid credentials or connection error.');
+        }
+    };
+
+    return (
+        <div className="container mt-5">
+            <div className="row justify-content-center">
+                <div className="col-md-6">
+                    <div className="card">
+                        <div className="card-body">
+                            <h2 className="card-title text-center mb-4">Staff Login</h2>
+                            <form onSubmit={handleLogin}>
+                                <div className="mb-3">
+                                    <label className="form-label">Username</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                {error && <div className="alert alert-danger">{error}</div>}
+                                <button type="submit" className="btn btn-primary w-100">Login</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div>
-          <label>Mot de passe</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && <p>{error}</p>}
-        <button type="submit">Se connecter</button>
-      </form>
-    </div>
-  );
+    );
 };
 
 export default Login;
