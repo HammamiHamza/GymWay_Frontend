@@ -1,14 +1,13 @@
-// src/pages/SessionList.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
-import authService from '../services/authService';
+import { AuthContext } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const SessionList = () => {
   const [sessions, setSessions] = useState([]);
   const [error, setError] = useState('');
-
-  // Get the user ID and token from localStorage
-  const userId = localStorage.getItem('userId');
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
   const loadSessions = async () => {
@@ -45,27 +44,30 @@ const SessionList = () => {
     }
   };
 
+  const handleEdit = (sessionId) => {
+    navigate(`/sessions/edit/${sessionId}`); // Navigate to the edit page
+  };
+
+  // Define the handleRegister function
   const handleRegister = async (sessionId) => {
-    if (!userId) {
-      alert('You must be logged in to register for a session');
-      return;
-    }
     try {
-      await axios.post(`http://localhost:3000/registrations`, {
-        userId: userId,
-        sessionId: sessionId
-      }, {
+      const response = await axios.post(`http://localhost:3000/registrations/session/${sessionId}`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       alert('Successfully registered for the session!');
+      // Optionally, you can refresh the sessions or registered sessions here
     } catch (error) {
       console.error('Error registering for session:', error);
-      alert('Error registering for session');
+      setError('Error registering for session');
     }
   };
+
+  const isStaff = user?.type === 'staff';
+  const isAdmin = user?.type === 'admin';
+  const isMember = user?.type === 'member';
 
   return (
     <div className="container mt-5">
@@ -86,19 +88,30 @@ const SessionList = () => {
                   Capacity: {session.capacity}
                 </p>
                 <div className="d-flex justify-content-between">
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => handleRegister(session.id)}
-                  >
-                    Register
-                  </button>
-                  {authService.getCurrentUser()?.role === 'ADMIN' && (
+                  {isMember && (
                     <button 
-                      className="btn btn-danger"
-                      onClick={() => handleDelete(session.id)}
+                      className="btn btn-primary"
+                      onClick={() => handleRegister(session.id)} // Register button
                     >
-                      Delete
+                      Register
                     </button>
+                  )}
+                  
+                  {(isStaff || isAdmin) && (
+                    <div className="btn-group">
+                      <button 
+                        className="btn btn-warning me-2"
+                        onClick={() => handleEdit(session.id)} // Edit button
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="btn btn-danger"
+                        onClick={() => handleDelete(session.id)} // Delete button
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -106,6 +119,18 @@ const SessionList = () => {
           </div>
         ))}
       </div>
+
+      {/* Add New Session button for staff/admin */}
+      {(isStaff || isAdmin) && (
+        <div className="mt-4">
+          <button 
+            className="btn btn-success"
+            onClick={() => navigate('/sessions/create')}
+          >
+            Create New Session
+          </button>
+        </div>
+      )}
 
       {sessions.length === 0 && !error && (
         <div className="alert alert-info">
