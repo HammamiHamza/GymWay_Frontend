@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import authService from '../services/authService';  // Assurez-vous que authService existe
+import { createCheckoutSession } from '../services/paymentService';  // Nouveau service
+import authService from '../services/authService';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -8,8 +9,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fonction de gestion de l'inscription
-  const handleRegister = async (e) => {
+  const handlePaymentAndRegister = async (e) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -21,16 +21,12 @@ const Register = () => {
     setError('');
 
     try {
-      // Remplacer avec la méthode réelle de votre service d'authentification
-      const response = await authService.register(email, password);  // Vous devez définir cette méthode dans authService.js
-      console.log('Utilisateur inscrit', response);
-
-      // Si l'inscription réussit, rediriger l'utilisateur vers la page de connexion ou dashboard
-      // Par exemple :
-      // history.push('/login');
+      // Démarrer le paiement Stripe
+      const response = await createCheckoutSession(email);
+      window.location.href = response.data.url; // Redirection vers Stripe Checkout
     } catch (err) {
-      setError('Erreur lors de l\'inscription, veuillez réessayer.');
-      console.error('Erreur d\'inscription', err);
+      setError('Erreur lors de la création du paiement.');
+      console.error('Erreur Stripe:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -40,7 +36,7 @@ const Register = () => {
     <div>
       <h2>Créer un compte</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      <form onSubmit={handleRegister}>
+      <form onSubmit={handlePaymentAndRegister}>
         <div>
           <label>Email</label>
           <input
@@ -72,7 +68,7 @@ const Register = () => {
         </div>
 
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Enregistrement...' : 'S\'inscrire'}
+          {isSubmitting ? 'Redirection vers Stripe...' : 'Payer et s\'inscrire'}
         </button>
       </form>
     </div>

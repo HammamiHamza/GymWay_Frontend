@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import SessionList from './pages/SessionList';
 import UserRegistrations from './pages/UserRegistrations';
+import Checkout from './pages/Checkout';
 
 const App = () => {
   return (
@@ -29,6 +30,7 @@ const App = () => {
         <Route path="/staff-dashboard" element={<StaffDashboard />} />
         <Route path="/manage-sessions" element={<SessionList />} />
         <Route path="/my-registrations" element={<UserRegistrations />} />
+        <Route path="/checkout" element={<Checkout/>}/>
       </Routes>
     </Router>
   );
